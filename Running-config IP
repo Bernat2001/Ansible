@@ -1,0 +1,56 @@
+
+---
+ - name: show run
+   connection: network_cli
+   gather_facts: true
+   hosts: all
+   become: false
+   tasks:
+    - name: Mostrar el hostname
+      debug:
+        msg: "Hostname is {{ ansible_net_hostname }}"
+
+    - name: Cambiar el hostname
+      ios_command:
+        commands:
+          - configure terminal
+          - hostname Router1
+          - exit
+      register: cambio_hostname
+
+    - name: Mostrar direcciones IP del router
+      debug:
+        var: ansible_net_all_ipv4_addresses
+
+    - name: Obtener configuracion del puerto Ethernet1/0
+      ios_command:
+        commands:
+          - show running-config interface Ethernet1/0
+      register: interface_config
+
+    - name: Cambiar direccion IP en el puerto Ethernet1/0
+      ios_command:
+        commands:
+          - configure terminal
+          - interface Ethernet1/0
+          - no ip address
+          - ip address 172.16.10.80 255.255.255.0
+
+    - name: show run
+      ios_command:
+        commands:
+          - show running-config
+      register: config
+
+    - name: guardar salida de la show run
+      copy:
+        content: "{{ config.stdout[0] }}"
+        dest: "/workdir/config/show_run_{{ inventory_hostname }}.txt"
+
+
+    - name: comprobacion de que se ha cambiado el hostname
+      ios_command:
+        commands:
+         - show running-config | include hostname
+      register: hostname
+
